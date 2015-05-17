@@ -1,26 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 
 module Main where
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Trans.Either
+import Data.Either.Combinators
 import Data.Hashable
 import System.Directory
-import Shelly
+import System.FilePath.Posix
+import System.Process
 import System.IO hiding (readFile, writeFile)
 import Prelude hiding (readFile, writeFile, length, take, drop, FilePath)
 import qualified Prelude as P
 import Data.Text
 import qualified Data.Text.IO as TIO
-import Data.Validation
 import Data.UUID
 import qualified Text.Parser.Char as PC
 import qualified Text.Parser.Combinators as PCO
 import Data.Attoparsec.Text hiding (take)
 
-data ScriptingError = ScriptReadError deriving (Eq, Show)
+data ScriptingError = ScriptReadError
+                    | ScriptParseError String
+                    deriving (Eq, Show)
 
 data ScriptDetails = ScriptDetails [Text] Text
 
@@ -30,8 +35,8 @@ main = putStrLn "Hello World!"
 
 runScript :: P.FilePath -> IO ()
 runScript scriptPath = do
-  validation <- runValidationT $ runScriptWithValidation scriptPath
-  print validation
+  result <- runEitherT $ runScriptWithValidation scriptPath
+  print result
 
 
 hashFileContents :: Text -> String
@@ -46,8 +51,8 @@ hashFileContents contents =
   in  show $ fromWords (fromIntegral first) (fromIntegral second) (fromIntegral third) (fromIntegral fourth)
 
 
-parseScript :: Text -> Parser ScriptDetails
-parseScript scriptContents =
+parseScript :: Parser ScriptDetails
+parseScript =
   let endOfLineChars    = ['\r', '\n']
       isEOLChar         = PC.oneOf endOfLineChars
       notEOLChar        = PC.noneOf endOfLineChars
@@ -63,7 +68,7 @@ parseScript scriptContents =
         scriptContent  <- remainder
         return $ ScriptDetails packageDetails scriptContent
 
-runScriptWithValidation :: P.FilePath -> ValidationT ScriptingError IO ()
+runScriptWithValidation :: P.FilePath -> EitherT ScriptingError IO ()
 runScriptWithValidation scriptPath = do
   -- Read file into memory.
   fileContents <- lift $ TIO.readFile scriptPath
@@ -73,15 +78,17 @@ runScriptWithValidation scriptPath = do
   let scriptDir = homeDirectory </> ".haskellscript" </> fileHash
   let scriptLocation = scriptDir </> "haskellscript.hs"
   scriptExists <- lift $ doesFileExist $ show scriptLocation
-  lift $ unless scriptExists $ shelly $ do
+  unless scriptExists $ do
     -- Create hashed path directory.
-    mkdir_p scriptDir
+    lift $ createDirectoryIfMissing True scriptDir
     -- Init sandbox in directory.
-    cd scriptDir
-    run_ "cabal" ["sandbox", "init"]
+    (_, _, _, sandboxInitHandle) <- lift $ createProcess (proc "cabal" ["sandbox", "init"]){ cwd = Just scriptDir }
+    lift $ waitForProcess sandboxInitHandle
     -- Parse file into dependencies and the remaining code to run.
-
+    let parseResult = parseOnly parseScript fileContents
+    scriptDetails <- hoistEither $ mapLeft ScriptParseError parseResult
     -- For each dependency install it into the sandbox.
+    return ()
     -- Create a file containing the remaining code.
   -- Use cabal to runhaskell the script created.
   
