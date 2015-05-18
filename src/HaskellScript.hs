@@ -51,10 +51,10 @@ isDependencyLine line = isPrefixOf "--#" line
 parseScript :: Text -> Either ScriptingError ScriptDetails
 parseScript script = do
   let scriptLines = lines script
-  afterShebang <- case scriptLines of
+  afterHashbang <- case scriptLines of
     first : rest  -> if isPrefixOf "#!" first then Right rest else Left $ ScriptParseError "No shebang at start of script."
     _             -> Left $ ScriptParseError "Script is empty."
-  let (dependenciesLines, remainder) = L.span (\line -> isDependencyLine line || (length $ strip line) == 0) afterShebang
+  let (dependenciesLines, remainder) = L.span (\line -> isDependencyLine line || (length $ strip line) == 0) afterHashbang
   let dependencies = L.sort $ fmap (strip . drop 3) $ filter isDependencyLine dependenciesLines
   return $ ScriptDetails dependencies (unlines remainder)
 
