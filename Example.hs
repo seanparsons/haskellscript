@@ -1,4 +1,4 @@
-#!/home/sean/workspace/haskellscript/dist/build/haskellscript/haskellscript
+#!/usr/bin/env haskellscript
 --#aeson
 {-# LANGUAGE OverloadedStrings #-}
 import Data.Aeson
