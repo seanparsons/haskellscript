@@ -1,5 +1,5 @@
 name:                   haskellscript
-version:                0.1.0.1
+version:                0.1.1
 synopsis:               Command line tool for running Haskell scripts with a hashbang.
 description:            Command line tool for running Haskell scripts with a hashbang.
 license:                BSD3
