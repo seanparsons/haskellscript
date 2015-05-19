@@ -1,7 +1,43 @@
 name:                   haskellscript
 version:                0.1.1
 synopsis:               Command line tool for running Haskell scripts with a hashbang.
-description:            Command line tool for running Haskell scripts with a hashbang.
+description:
+  This tool provides the ability to script in a shell with Haskell (including dependencies) the same way that has been possible with bash scripts or Python.
+  .
+  /Examples/
+  .
+  Print out JSON constructed with Aeson
+  .
+  <https://github.com/seanparsons/haskellscript/blob/master/Example.hs>
+  .
+  /Prerequisites/
+  .
+  A sandbox capable install of [Cabal](https://www.haskell.org/cabal/)
+  .
+  /Howto/
+  .
+  The script falls into three main parts:
+  .
+  * The hashbang first line:
+  .
+  > #!/usr/bin/env haskellscript
+  .
+  * Dependencies (potentially including versions):
+  .
+  > --#aeson
+  .
+  * The code:
+  .
+  > import Data.Aeson
+  > import Data.ByteString.Lazy hiding (putStrLn, unpack)
+  > import Data.Text
+  > import Data.Text.Encoding
+  > main = putStrLn $ unpack $ decodeUtf8 $ toStrict $ encode $ object ["Test" .= True, "Example" .= True]
+  .
+  Note that because the dependencies specified are hashed to enable re-use it's worth specifying
+  exact versions across multiple scripts to prevent the version used being quite old after a while.
+
+
 license:                BSD3
 license-file:           LICENSE
 author:                 Sean Parsons
