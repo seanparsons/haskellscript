@@ -32,7 +32,8 @@ description:
   > import Data.ByteString.Lazy hiding (putStrLn, unpack)
   > import Data.Text
   > import Data.Text.Encoding
-  > main = putStrLn $ unpack $ decodeUtf8 $ toStrict $ encode $ object ["Test" .= True, "Example" .= True]
+  > jsonExample = object ["Test" .= True, "Example" .= True]
+  > main = putStrLn $ unpack $ decodeUtf8 $ toStrict $ encode jsonExample 
   .
   Note that because the dependencies specified are hashed to enable re-use it's worth specifying
   exact versions across multiple scripts to prevent the version used being quite old after a while.
