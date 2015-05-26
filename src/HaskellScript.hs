@@ -89,14 +89,19 @@ runScriptWithValidation scriptPath = do
   let dependenciesHash = getDependenciesHash scriptDetails
   let scriptHash = getContentHash scriptDetails
   let scriptDir = homeDirectory </> ".haskellscript" </> dependenciesHash
-  scriptDirExists <- lift $ doesDirectoryExist $ scriptDir
-  unless scriptDirExists $ do
+  let dependenciesMarker = scriptDir </> ".dependencieswritten"
+  dependenciesMarkerExists <- lift $ doesFileExist $ dependenciesMarker
+  unless dependenciesMarkerExists $ do
+    -- Remove the directory first.
+    lift $ removeDirectoryRecursive scriptDir
     -- Create hashed path directory.
     lift $ createDirectoryIfMissing True scriptDir
     -- Init sandbox in directory.
     runInWorkingDir scriptDir "cabal" ["sandbox", "init"]
     -- For each dependency install it into the sandbox.
     traverse (\dep -> runInWorkingDir scriptDir "cabal" ["install", (unpack dep)]) (scriptDependencies scriptDetails)
+    -- Write file to confirm dependencies have been written.
+    lift $ TIO.writeFile dependenciesMarker mempty
     return ()
   let scriptLocation = scriptDir </> scriptHash <.> "hs"
   -- Create a file containing the code.
