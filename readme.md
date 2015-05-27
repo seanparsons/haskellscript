@@ -10,6 +10,7 @@ Examples
 --------
 
 [Print out JSON constructed with Aeson](https://github.com/seanparsons/haskellscript/blob/master/Example.hs)
+
 [Lookup weather for your current IP address](https://github.com/seanparsons/haskellscript/blob/master/WeatherExample.hs)
 
 
