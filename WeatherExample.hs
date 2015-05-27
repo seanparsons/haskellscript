@@ -4,13 +4,10 @@
 --#lens-aeson-1.0.0.4
 
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.Lens
-import Data.Aeson.TH
-import Data.Either
 import Data.Maybe
 import Data.Text (unpack)
 import Network.HTTP.Conduit
