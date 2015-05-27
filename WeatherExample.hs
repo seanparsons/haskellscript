@@ -1,68 +1,29 @@
 #!/usr/bin/env haskellscript
 --#aeson-0.8.1.0
 --#http-conduit-2.1.5
+--#lens-aeson-1.0.0.4
 
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+import Control.Lens
 import Data.Aeson
+import Data.Aeson.Lens
 import Data.Aeson.TH
-import Data.ByteString.Lazy hiding (putStr, putStrLn, unpack, drop)
-import Data.Char (toLower)
+import Data.Either
 import Data.Maybe
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as L
-import Data.Text.Encoding
+import Data.Text (unpack)
 import Network.HTTP.Conduit
 
-data IPLookupResult = IPLookupResult
-                    { city :: String
-                    , longitude :: Double
-                    , latitude :: Double
-                    } deriving (Eq, Show)
-
-$(deriveJSON defaultOptions ''IPLookupResult)
-
-data Weather = Weather
-             { description :: String
-             } deriving (Eq, Show)
-
-$(deriveJSON defaultOptions ''Weather)
-
-data WeatherMain = WeatherMain
-                 { temp :: Double
-                 } deriving (Eq, Show)
-
-$(deriveJSON defaultOptions ''WeatherMain)
-
-data WeatherLookupResult = WeatherLookupResult
-                         { resultWeather :: [Weather]
-                         , resultMain :: WeatherMain
-                         } deriving (Eq, Show)
-
-$(deriveJSON defaultOptions{fieldLabelModifier = fmap toLower . drop 6} ''WeatherLookupResult)
-
-lookupIP :: IO IPLookupResult
-lookupIP = do
-  ipLookupBS <- simpleHttp "https://freegeoip.net/json/"
-  maybe (fail "Couldn't decode IP lookup response.") return $ decode ipLookupBS
-
-lookupWeather :: IPLookupResult -> IO WeatherLookupResult
-lookupWeather (IPLookupResult ipCity ipLongtitude ipLatitude) = do
-  weatherLookupBS <- simpleHttp ("http://api.openweathermap.org/data/2.5/weather?lat=" ++ (show ipLatitude) ++ "&lon=" ++ (show ipLongtitude))
-  maybe (fail "Couldn't decode weather lookup response.") return $ decode weatherLookupBS
-
-printWeatherDetails :: IPLookupResult -> WeatherLookupResult -> IO ()
-printWeatherDetails (IPLookupResult location _ _) (WeatherLookupResult [(Weather weatherDescription)] (WeatherMain weatherTemp)) = do
-  putStr "The weather in "
-  putStr location
-  putStr " is: "
-  putStrLn weatherDescription
-  putStr "With the temperature currently at: "
-  print $ round (weatherTemp - 273.16)
-printWeatherDetails _ _ = putStrLn "Not a full set of weather info."
+maybeFail f m = maybe (fail f) return m
 
 main = do
-  ipResult <- lookupIP
-  weatherResult <- lookupWeather ipResult
-  printWeatherDetails ipResult weatherResult
+  ipLookupBS        <- simpleHttp "https://freegeoip.net/json/"
+  city              <- maybeFail "Can't parse city." (ipLookupBS ^? key "city" . _String)
+  latitude          <- maybeFail "Can't parse latitude." (ipLookupBS ^? key "latitude" . _Double)
+  longitude         <- maybeFail "Can't parse longitude." (ipLookupBS ^? key "longitude" . _Double)
+  weatherLookupBS   <- simpleHttp ("http://api.openweathermap.org/data/2.5/weather?lat=" ++ (show latitude) ++ "&lon=" ++ (show longitude))
+  description       <- maybeFail "Can't parse description." (weatherLookupBS ^? key "weather" . nth 0 . key "description" . _String)
+  temperature       <- maybeFail "Can't parse temperature." $ (weatherLookupBS ^? key "main" . key "temp" . _Double)
+  putStrLn ("The weather in " ++ (unpack city) ++ " is " ++ (unpack description) ++ ".")
+  putStrLn ("With the temperature currently at " ++ (show $ round (temperature - 273.16)) ++ " degrees.")

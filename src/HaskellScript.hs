@@ -91,10 +91,11 @@ runScriptWithValidation scriptPath = do
   let scriptHash = getContentHash scriptDetails
   let scriptDir = homeDirectory </> ".haskellscript" </> dependenciesHash
   let dependenciesMarker = scriptDir </> ".dependencieswritten"
-  dependenciesMarkerExists <- lift $ doesFileExist $ dependenciesMarker
+  dependenciesMarkerExists <- lift $ doesFileExist dependenciesMarker
   unless dependenciesMarkerExists $ do
     -- Remove the directory first.
-    lift $ removeDirectoryRecursive scriptDir
+    scriptDirExists <- lift $ doesDirectoryExist scriptDir
+    lift $ when scriptDirExists $ removeDirectoryRecursive scriptDir
     -- Create hashed path directory.
     lift $ createDirectoryIfMissing True scriptDir
     -- Init sandbox in directory.
