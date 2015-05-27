@@ -7,6 +7,7 @@ import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Crypto.Hash
 import Data.Either.Combinators
+import Data.Monoid
 import Data.Traversable
 import qualified Data.List as L
 import System.Directory
