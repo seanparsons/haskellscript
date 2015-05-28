@@ -6,6 +6,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Crypto.Hash
+import Data.Char
 import Data.Either.Combinators
 import Data.Monoid
 import Data.Traversable
@@ -15,7 +16,7 @@ import System.Environment (getArgs)
 import System.FilePath.Posix
 import System.Process
 import System.IO hiding (readFile, writeFile)
-import Prelude hiding (readFile, writeFile, length, take, drop, FilePath, lines, unlines)
+import Prelude hiding (readFile, writeFile, length, take, drop, FilePath, lines, unlines, span, null)
 import qualified Prelude as P
 import Data.Text hiding (filter)
 import qualified Data.Text.IO as TIO
@@ -45,19 +46,29 @@ runScript scriptPath = do
     (Right _)     -> return ()
     (Left error)  -> putStrLn "Error handling script: " >> print error
 
-isDependencyLine :: Text -> Bool
-isDependencyLine line = isPrefixOf "--#" line
+parseDependencyLine :: Text -> Maybe Text
+parseDependencyLine line = 
+  let (hyphens, afterHyphens) = span (== '-') line
+      (_, afterSpaces)        = span isSpace afterHyphens
+      (hashes, afterHashes)   = span (== '#') afterSpaces
+      isValid                 = (not $ null hyphens) && (not $ null hashes)
+  in  if isValid then Just $ strip afterHashes else Nothing
 
+
+parseDependencies :: [Text] -> [Text] -> ([Text], [Text])
+parseDependencies [] dependenciesAccumulator              = (dependenciesAccumulator, [])
+parseDependencies (first : rest) dependenciesAccumulator  = case (parseDependencyLine first) of
+  Just dep  -> parseDependencies rest (dep : dependenciesAccumulator)
+  Nothing   -> (dependenciesAccumulator, (first : rest))
 
 parseScript :: Text -> Either ScriptingError ScriptDetails
 parseScript script = do
   let scriptLines = lines script
   afterHashbang <- case scriptLines of
-    first : rest  -> if isPrefixOf "#!" first then Right rest else Left $ ScriptParseError "No shebang at start of script."
+    first : rest  -> if isPrefixOf "#!" $ strip first then Right rest else Right scriptLines
     _             -> Left $ ScriptParseError "Script is empty."
-  let (dependenciesLines, remainder) = L.span (\line -> isDependencyLine line || (length $ strip line) == 0) afterHashbang
-  let dependencies = L.sort $ fmap (strip . drop 3) $ filter isDependencyLine dependenciesLines
-  return $ ScriptDetails dependencies (unlines remainder)
+  let (dependencies, remainder) = parseDependencies afterHashbang []
+  return $ ScriptDetails (L.sort dependencies) (unlines remainder)
 
 
 getDependenciesHash :: ScriptDetails -> String

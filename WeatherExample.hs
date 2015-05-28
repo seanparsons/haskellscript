@@ -1,7 +1,7 @@
 #!/usr/bin/env haskellscript
---#aeson-0.8.1.0
---#http-conduit-2.1.5
---#lens-aeson-1.0.0.4
+-- #aeson-0.8.1.0
+-- #http-conduit-2.1.5
+-- #lens-aeson-1.0.0.4
 
 {-# LANGUAGE OverloadedStrings #-}
 
